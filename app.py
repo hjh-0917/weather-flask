@@ -1,10 +1,13 @@
 from flask import Flask, render_template, request
 import requests
+import os
 
 app = Flask(__name__)
 
-API_KEY = "b8cc9f8b378f3baf0ad972080ccc3a79"
+# ✅ OpenWeatherMap API 키 가져오기 (Render 환경변수 OR 로컬 변수)
+API_KEY = os.environ.get("OPENWEATHER_API_KEY", "여기에_테스트용_API키")
 
+# ✅ 한글 도시명 → 영어 도시명 변환
 korean_to_english = {
     "서울": "Seoul",
     "부산": "Busan",
@@ -25,32 +28,30 @@ korean_to_english = {
     "제주": "Jeju"
 }
 
-def get_weather(korean_city):
-    city_en = korean_to_english.get(korean_city)
-    if not city_en:
-        return None, f"지원하지 않는 도시명입니다: {korean_city}"
-    
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={city_en}&appid={API_KEY}&units=metric"
-    response = requests.get(url)
-    
-    if response.status_code == 200:
-        data = response.json()
-        temp = data['main']['temp']
-        desc = data['weather'][0]['description']
-        return (temp, desc), None
-    else:
-        return None, "날씨 정보를 불러오는데 실패했습니다. API 키와 도시명을 확인하세요."
-
 @app.route("/", methods=["GET", "POST"])
 def index():
     weather_info = None
-    error = None
-    
-    if request.method == "POST":
-        city_input = request.form.get("city")
-        weather_info, error = get_weather(city_input)
-    
-    return render_template("index.html", weather=weather_info, error=error)
 
+    if request.method == "POST":
+        city_kor = request.form.get("city")
+        city_eng = korean_to_english.get(city_kor)
+
+        if not city_eng:
+            weather_info = f"지원하지 않는 도시명입니다: {city_kor}"
+        else:
+            url = f"http://api.openweathermap.org/data/2.5/weather?q={city_eng}&appid={API_KEY}&units=metric"
+            response = requests.get(url)
+            if response.status_code == 200:
+                data = response.json()
+                temp = data['main']['temp']
+                desc = data['weather'][0]['description']
+                weather_info = f"{city_kor}({city_eng})의 현재 온도는 {temp}°C, 날씨는 '{desc}' 입니다."
+            else:
+                weather_info = "날씨 정보를 불러오는데 실패했습니다. API 키와 도시명을 확인하세요."
+
+    return render_template("index.html", weather=weather_info)
+
+# ✅ Render 배포용 (0.0.0.0 + 동적 PORT)
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
