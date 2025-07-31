@@ -5,7 +5,7 @@ import os
 app = Flask(__name__)
 
 # ✅ OpenWeatherMap API 키 가져오기 (Render 환경변수 OR 로컬 변수)
-API_KEY = os.environ.get("OPENWEATHER_API_KEY", "여기에_테스트용_API키")
+API_KEY = os.environ.get("OPENWEATHER_API_KEY")
 
 # ✅ 한글 도시명 → 영어 도시명 변환
 korean_to_english = {
